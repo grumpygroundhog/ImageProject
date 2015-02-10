@@ -74,25 +74,23 @@ public class ImageProcessor {
     public static void flipVertical(GVpicture myPic) {
         final int width = myPic.getWidth();
         final int height = myPic.getHeight();
-        GVpicture flipped = new GVpicture(width,height);
         int row, col, color;
         byte[][][] picArray = myPic.getRGBPixels();
-        //byte[][][] picArrayTemp;
-        //picArrayTemp = picArray;
-
-        for (color = 0; color < 3; color++) {
+        GVpicture flipped = new GVpicture(width,height);
+        byte[][][] flippedArray = flipped.getRGBPixels();
+        for (color = 0; color < picArray.length; color++) {
             for (row = 0; row < picArray[color].length; row++) {
                 for (col = 0; col < picArray[color][row].length; col++) {
 
 
-                        byte temp = picArray[color][row][col];
-                        picArray[color][row][col] = picArray[color][row][picArray[color][row].length - col - 1];
-                        picArray[color][row][picArray[color][row].length -col -1] = temp;
-                        //picArray[color][row][picArray.length -i -1] = temp;
+                        
+                        flippedArray[color][row][col] = picArray[color][row][picArray[color][row].length - col - 1];
 
                 }
             }
         }
+        myPic.setImage(flipped);
+
 
     }
 }
