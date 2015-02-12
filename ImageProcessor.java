@@ -137,24 +137,93 @@ public class ImageProcessor {
         final int height = myPic.getHeight();
         final int checkerWidth = width / 8;
         final int checkHeight = height / 8;
-        int widthCount = 0;
-        int colorAvg= 0;
+        int widthCountGray = 0;
+        int widthCountColor = 0;
+        int heightCount = 0;
+        int colorAvg = 0;
+        int tempRow = 0;
         int row, col, color;
         byte[][][] picArray = myPic.getRGBPixels();
-        GVpicture flipped = new GVpicture(width, height);
-        byte[][][] checkerArray = flipped.getRGBPixels();
+        GVpicture checkerImage = new GVpicture(width, height);
+        byte[][][] checkerArray = checkerImage.getRGBPixels();
+        for (color = 0; color < picArray.length; color++) {
+            tempRow = 0;
+            widthCountGray = 0;
+            heightCount = 0;
+
+
+            for (row = 0; row < picArray[color].length; row++) {
+
+                for (col = 0; col < picArray[color][row].length; col++) {
+                    if (row > tempRow) {
+                        heightCount++;
+                        tempRow = row;
+                    }
+
+
+                    if ((heightCount < checkHeight) && (widthCountGray < checkerWidth)) {
+                        colorAvg = byteAverage(picArray[0][row][col], picArray[1][row][col], picArray[2][row][col]);
+                        checkerArray[color][row][col] = (byte) colorAvg;
+                        widthCountGray++;
+                    } else {
+                        checkerArray[color][row][col] = picArray[color][row][col];
+                        widthCountGray++;
+
+                        if (widthCountGray == checkerWidth * 2) {
+                            widthCountGray = 0;
+                        }
+                        if (heightCount == checkHeight * 2) {
+                            heightCount = 0;
+                        }
+                    }
+
+                }
+            }
+        }
+
+
+        myPic.setImage(checkerImage);
+
+
+    }
+
+
+    private static int byteAverage(byte one, byte two, byte three) {
+        int toReturn = ((one & 0xFF) + (two & 0xFF) + (three & 0xFF)) / 3;
+        return toReturn;
+    }
+
+    public static void pixelate(GVpicture myPic) {
+        final int width = myPic.getWidth();
+        final int height = myPic.getHeight();
+        int row, col, color;
+        int prevAvg = 0;
+        int runningAvg = 0;
+        int count;
+        byte[][][] picArray = myPic.getRGBPixels();
+        GVpicture pixelated = new GVpicture(width, height);
+        byte[][][] pixArray = pixelated.getRGBPixels();
         for (color = 0; color < picArray.length; color++) {
             for (row = 0; row < picArray[color].length; row++) {
-                for (col = 0; col < picArray[color][row].length; col++) {
+                for (col = 0; col < picArray[color][row].length; col = col + 8) {
 
-                    if(col <= widthCount && widthCount < 2)
-                    {
-                        colorAvg = byteAverage(picArray[0][row][col], picArray[1][row][col], picArray[2][row][col]);
-                        checkerArray[color][row][col] = (byte)colorAvg;
-                        widthCount++;
+
+                    for (int upToEight = 0; upToEight <= 7; upToEight++) {
+                        if (upToEight == 0) {
+                            runningAvg = 0;
+                            prevAvg = byteAverage(picArray[0][row][upToEight], picArray[1][row][upToEight], picArray[2][row][upToEight]);
+                            int avg = byteAverage(picArray[0][row][upToEight + 1], picArray[1][row][upToEight + 1], picArray[2][row][upToEight + 1]);
+                            runningAvg = (runningAvg + prevAvg + avg) / 3;
+                        } else {
+                            prevAvg = byteAverage(picArray[0][row][upToEight], picArray[1][row][upToEight], picArray[2][row][upToEight]);
+                            int avg = byteAverage(picArray[0][row][upToEight + 1], picArray[1][row][upToEight + 1], picArray[2][row][upToEight + 1]);
+                            runningAvg = (runningAvg + prevAvg + avg) / 3;
+                        }
+
                     }
-                    else
-                    {
+
+                    for (count = 0; count < 8; count++) {
+                        pixArray[color][row][col + count] = (byte) runningAvg;
 
                     }
 
@@ -162,16 +231,104 @@ public class ImageProcessor {
                 }
             }
         }
-        myPic.setImage(flipped);
+        myPic.setImage(pixelated);
 
 
     }
 
+    public static void reduce(GVpicture myPic) {
+        final int width = myPic.getWidth();
+        final int height = myPic.getHeight();
+        int row, col, color;
+        int countDown = 0;
+        byte[][][] picArray = myPic.getRGBPixels();
+        GVpicture reducedPic = new GVpicture(width, height);
+        byte[][][] reducedArray = reducedPic.getRGBPixels();
+        for (color = 0; color < picArray.length; color++) {
+            for (row = 0; row < picArray[color].length; row = row + 2) {
 
-    private static int byteAverage(byte one, byte two, byte three) {
-        int toReturn = ((one & 0xFF) + (two & 0xFF) + (three & 0xFF))/3;
-        return toReturn;
+                for (col = 0; col < picArray[color][row].length; col = col + 2) {
+
+                    if (row == 0) {
+                        reducedArray[color][row][col] = picArray[color][row][col];
+                    } else {
+                        reducedArray[color][row / 2][col / 2] = picArray[color][row][col];
+                    }
+
+                }
+
+
+            }
+
+
+        }
+        myPic.setImage(copyImage(reducedPic, width, height));
+
+
     }
 
+    private static GVpicture copyImage(GVpicture myPic, int width, int height) {
+        int bigWidth = width;
+        int bigHeight = height;
+        int smallWidth = myPic.getWidth() / 2;
+        int smallHeight = myPic.getHeight() / 2;
+        int row, col, color;
+        byte[][][] picArray = myPic.getRGBPixels();
+        GVpicture outPic = new GVpicture(bigWidth, bigHeight);
+        byte[][][] outArray = outPic.getRGBPixels();
+        for (color = 0; color < picArray.length; color++) {
+            for (row = 0; row < picArray[color].length; row++) {
 
+                for (col = 0; col < picArray[color][row].length; col++) {
+
+                    if (col < smallWidth && row < smallHeight) {
+                        outArray[color][row][col] = picArray[color][row][col];
+                    }
+                    if (col > smallWidth && row < smallHeight) {
+                        outArray[color][row][col] = picArray[color][row][col - smallWidth];
+                    }
+                    if (col > smallWidth && row > smallHeight) {
+                        outArray[color][row][col] = picArray[color][row - smallHeight][col - smallWidth];
+                    }
+                    if (col < smallWidth && row > smallHeight) {
+                        outArray[color][row][col] = picArray[color][row - smallHeight][col];
+                    }
+
+                }
+
+
+            }
+
+
+        }
+        return outPic;
+    }
+
+    public static void invert(GVpicture myPic) {
+        int width = myPic.getWidth();
+        int height = myPic.getHeight();
+        int row, col, color;
+        int countDown = 0;
+        byte[][][] picArray = myPic.getRGBPixels();
+        GVpicture inverted = new GVpicture(width, height);
+        byte[][][] invertArray = inverted.getRGBPixels();
+
+        for (color = 0; color < picArray.length; color++) {
+            for (row = 0; row < picArray[color].length; row++) {
+
+                for (col = 0; col < picArray[color][row].length; col++) {
+
+                    invertArray[color][row][col] = (byte) (0xFFFFFF - picArray[color][row][col]);
+
+
+                }
+
+
+            }
+            myPic.setImage(inverted);
+
+        }
+
+
+    }
 }
